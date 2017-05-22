@@ -2,7 +2,8 @@
 This script will poll an Active Directory group for computers that have the bitlocker policies applied.
 It will then connect to Active Directory, and check to see if the bitlocker keys are backed up against the computer object.
 Next, it will connect to your MBAM database server, and see if keys are properly backed up there.
-#run-remote-desktop-from-google-spreadsheet.
+
+# run-remote-desktop-from-google-spreadsheet.
 This is used to maintain active RDP sessions to a list of Windows servers, as noted in a Google spreadsheet.
 It makes use of a 3rd party program (https://github.com/prasmussen/gdrive) to download a copy of the sheet.
 It then imports the sheet, and looks for any entry for which you are responsible, and that has the appropriate status.
