@@ -27,6 +27,7 @@ that you do not get lost in your list.
 	1. *$StatusToUse* is the value the script will look for in the status column.  If it matches this string, it will maintain an RDP session.
 	1. *$ShowDebugMessages* to yes/no, if you want to see more detailed script output if something doesn't work right.
 1. Run the script!
+1. As you finish with a server or are ready to start a new one, change the status in the google sheet.
 	
 ##### Example Sheet Layout
 Host | Task Admin | Host Status
