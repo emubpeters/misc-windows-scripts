@@ -1,8 +1,9 @@
-## run-remote-desktop-from-google-spreadsheet.
+## run-remote-desktop-from-google-spreadsheet
 This is used to maintain active RDP sessions to a list of Windows servers, as noted in a Google spreadsheet.
 It makes use of a 3rd party program (https://github.com/prasmussen/gdrive) to download a copy of the sheet.
 It then imports the sheet, and looks for any entry for which you are responsible, and that has the appropriate status.
-For each valid entry, it then checks to see if there is an active RDP session, and if not, it will start one.
+For each valid entry, it then checks to see if there is an active RDP session, and if not, it will start one.  The cycle repeats
+every 30 seconds, so as long as you keep your google sheet updated as you progress, you'll always have the proper RDP sessions open.
 
 This is useful if you are having to make changes to a long list of servers, especially changes which require reboots, to make sure
 that you do not get lost in your list.
