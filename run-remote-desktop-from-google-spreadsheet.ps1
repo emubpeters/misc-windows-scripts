@@ -14,6 +14,8 @@
 #
 #########################
 
+add-pssnapin WASP
+
 ###############
 # Variable Configuration
 ###############
@@ -24,7 +26,7 @@ $Delay = 30
 $user = $env:UserName
 
 # What's the name of the Google sheet you are working with?
-$SheetName = '<sheet name>'
+$SheetName = 'DowntimeFun'
 
 # What is the header for the column containing the name of the person responsible?
 $AdminNameHeader = 'Task Admin'
@@ -38,6 +40,25 @@ $StatusToUse = 'patching'
 
 # Debugging?
 $ShowDebugMessages = "yes"
+
+# Window Settings
+$RDPWidthInPixels = 800
+$RDPHeightInPixels = 600
+$Window1XPos = -1914
+$Window1YPos = 15
+$WindowXBuffer = 20
+$WindowYBuffer = -75
+
+# Calculated, don't change these
+$Window2XPos = $Window1XPos + $RDPWidthInPixels + $WindowXBuffer
+$Window2YPos = $Window1YPos
+$Window3XPos = $Window1XPos
+$Window3YPos = $Window1YPos + $RDPHeightInPixels + $WindowYBuffer
+$Window4XPos = $Window1XPos + $RDPWidthInPixels + $WindowXBuffer
+$Window4YPos = $Window1YPos + $RDPHeightInPixels + $WindowYBuffer
+$WindowWidth = $RDPWidthInPixels + 16
+$WindowHeight = $RDPHeightInPixels + 39
+
 
 ###################
 # Error Check
@@ -57,7 +78,6 @@ if ($GDriveSearch) {
     write-host "       at the top of this script for the github path."
     break
 }
-
 
 ###################
 # Script Body
@@ -115,17 +135,53 @@ while ($true) {
     write-host ""
     $ServersBeingPatched = Import-Csv $InputFile -EA Ignore | Where-Object {$_.$StatusHeader -eq $StatusToUse -and $_.$AdminNameHeader -eq $user}
 
-    # Get all instances of the remote desktop app that are running
-    $RunningRemoteDesktop = Get-Process mstsc -EA SilentlyContinue | where {$_.mainWindowTitle}
-
     # Find out which of the ones listed as patching doesn't have an active RDP Session
     $Count = 0
+    
+    # Go through all the servers in the to-do list
     foreach ($server in $ServersBeingPatched) {
+        
+        # Get all instances of the remote desktop app that are running
+        $RunningRemoteDesktop = Get-Process mstsc -EA SilentlyContinue | where {$_.mainWindowTitle}
+        $WindowLocations = Select-window $RunningRemoteDesktop.ProcessName | get-windowposition
+
+        # Figure out positions
+        $first = 'no'
+        $second = 'no'
+        $third = 'no'
+        $fourth = 'no'
+
+        # See what positions are currently taken
+        foreach ($coordinate in $WindowLocations) {
+    
+            if ($coordinate.X -eq $Window1XPos) {
+                if ($coordinate.Y -eq $Window1YPos) {
+                    $first = 'yes'
+                }
+                if ($coordinate.Y -eq $Window3YPos) {
+                    $third = 'yes'
+                }
+            }
+
+            if ($coordinate.X -eq $Window2XPos) {
+                if ($coordinate.Y -eq $Window2YPos) {
+                    $second = 'yes'
+                }
+                if ($coordinate.Y -eq $Window4YPos) {
+                    $fourth = 'yes'
+                }
+            }
+        }
+        
         $Count++
+        
+        # Initial check to see if it's connected
         $connected = "no"
         foreach ($session in $RunningRemoteDesktop) {
             if ($session.MainWindowTitle.ToLower() -match $server.Host.ToLower()) {
                 $connected = "yes"
+                $WindowTitle = $session.MainWindowTitle
+                write-host "   " $WindowTitle
             }
         }
 
@@ -133,7 +189,37 @@ while ($true) {
         if ($connected -eq "no") {
             if (test-connection -Count 1 $server.Host) {
                 write-host "    " $server.Host " is online!  Attempting RDP session..."
-                mstsc /v: $server.Host
+                mstsc /v: $server.Host /w:$RDPWidthInPixels /h:$RDPHeightInPixels
+                
+                # Pause a few seconds so the window has time to open, before trying to move it
+                Start-Sleep -Seconds 2
+
+                # It's now connected.  Get the title of the open window
+                $RunningRemoteDesktop = Get-Process mstsc -EA SilentlyContinue | where {$_.mainWindowTitle}
+                foreach ($session in $RunningRemoteDesktop) {
+                    if ($session.MainWindowTitle.ToLower() -match $server.Host.ToLower()) {
+                        $connected = "yes"
+                        $WindowTitle = $session.MainWindowTitle.ToString()
+                    }
+                }
+
+                # Move the window!
+                if ($first -eq 'no') {
+                   write-host "      Moving to spot 1"
+                   Select-Window -Title $WindowTitle | Set-WindowPosition -Left $Window1XPos -Top $Window1YPos -Width $WindowWidth -Height $WindowHeight
+                } elseif ($second -eq 'no') {
+                   write-host "      Moving to spot 2"
+                   Select-Window -Title $WindowTitle | Set-WindowPosition -Left $Window2XPos -Top $Window2YPos -Width $WindowWidth -Height $WindowHeight
+                } elseif ($third -eq 'no') {
+                   write-host "      Moving to spot 3"
+                   Select-Window -Title $WindowTitle | Set-WindowPosition -Left $Window3XPos -Top $Window3YPos -Width $WindowWidth -Height $WindowHeight
+                } elseif ($fourth -eq 'no') {
+                   write-host "      Moving to spot 4"
+                   Select-Window -Title $WindowTitle | Set-WindowPosition -Left $Window4XPos -Top $Window4YPos -Width $WindowWidth -Height $WindowHeight
+                }
+                write-host "         waiting a moment..."
+                Start-Sleep -Seconds 2
+                
             } else {
                 write-host "    "  $server.Host " is offline... will try reconnecting at next pass."
             }
